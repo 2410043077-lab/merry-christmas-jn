@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>MERRY CHRISTMAS - JN Edition</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Pinyon+Script&family=Noto+Serif+SC:wght@300;700&display=swap');
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #050205;
+            font-family: 'Cinzel', serif;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent; /* 移除手机点击高亮 */
+        }
+
+        #canvas-container {
+            position: absolute;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            z-index: 1;
+        }
+
+        /* 启动页 */
+        #start-screen {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle, #0f1a0f 0%, #000000 100%);
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 1s ease;
+        }
+        #start-screen.hidden { opacity: 0; pointer-events: none; }
+        
+        .start-btn {
+            margin-top: 40px;
+            padding: 12px 40px;
+            border: 1px solid #c41e3a;
+            background: rgba(196, 30, 58, 0.1);
+            color: #c41e3a;
+            font-family: 'Cinzel', serif;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.5s;
+            letter-spacing: 3px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 0 15px rgba(196, 30, 58, 0.2);
+        }
+
+        /* UI 层 */
+        #ui-layer {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 10;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 20px;
+            box-sizing: border-box;
+            opacity: 0; 
+            transition: opacity 1s ease 0.5s;
+        }
+        #ui-layer.visible { opacity: 1; }
+
+        .header-container {
+            text-align: center;
+            margin-top: 5vh; 
+            pointer-events: auto;
+            position: relative;
+        }
+
+        h1 {
+            font-family: 'Pinyon Script', cursive; 
+            font-size: clamp(3rem, 8vw, 5rem);
+            margin: 0;
+            background: linear-gradient(to bottom, #fff 10%, #FFD700 40%, #c41e3a 80%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 0 15px rgba(196, 30, 58, 0.3));
+        }
+
+        .subtitle {
+            font-family: 'Pinyon Script', cursive;
+            font-size: clamp(1.2rem, 2.5vw, 1.8rem);
+            color: #FFD700;
+            text-align: center;
+            margin-top: 5px;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+        }
+
+        /* 控制面板 - 手机适配 */
+        .guide-panel {
+            position: absolute;
+            left: 20px; bottom: 100px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            background: rgba(0,0,0,0.5);
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            pointer-events: auto; /* 允许点击 */
+            backdrop-filter: blur(2px);
+        }
+        .guide-item { 
+            font-size: 0.9rem; 
+            color: #ccc; 
+            cursor: pointer; 
+            transition: color 0.3s;
+            display: flex;
+            align-items: center;
+        }
+        .guide-item:active { transform: scale(0.95); } /* 点击反馈 */
+        .guide-item.active { color: #FFD700; text-shadow: 0 0 8px rgba(255, 215, 0, 0.5); }
+        .guide-item span { 
+            color: #FFD700; 
+            margin-right: 10px; 
+            font-weight: bold; 
+            border: 1px solid #FFD700; 
+            padding: 2px 8px; 
+            border-radius: 4px;
+            min-width: 15px;
+            text-align: center;
+        }
+
+        .wish-container {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            pointer-events: auto;
+            width: 90%;
+            max-width: 450px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            background: rgba(20, 30, 20, 0.6);
+            border: 1px solid rgba(34, 139, 34, 0.4);
+            border-radius: 30px;
+            padding: 10px 20px;
+            color: #fff;
+            font-family: 'Noto Serif SC', serif;
+            outline: none;
+            text-align: center;
+            font-size: 16px; /* 防止iOS放大 */
+        }
+
+        button#wish-btn {
+            background: linear-gradient(135deg, #c41e3a, #8b0000);
+            border: none;
+            color: #fff;
+            font-weight: 700;
+            padding: 0 20px;
+            border-radius: 30px;
+            white-space: nowrap;
+        }
+
+        /* 弹窗 */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(5px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease;
+        }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        
+        .letter-card {
+            background: rgba(10, 20, 10, 0.95);
+            border: 1px solid rgba(255, 215, 0, 0.5);
+            padding: 30px 20px;
+            width: 80%;
+            max-width: 400px;
+            text-align: center;
+            border-radius: 4px;
+            box-shadow: 0 0 40px rgba(34, 139, 34, 0.2);
+        }
+
+        .letter-text {
+            font-family: 'Noto Serif SC', serif;
+            font-size: 1.2rem;
+            color: #fff;
+            line-height: 1.6;
+            margin-bottom: 25px;
+        }
+
+        .wish-feedback-card {
+            background: #000;
+            border: 2px solid #c41e3a;
+            padding: 30px;
+            text-align: center;
+            border-radius: 10px;
+            width: 70%;
+        }
+    </style>
+    
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+</head>
+<body>
+
+    <div id="start-screen">
+        <h1 style="font-family: 'Pinyon Script', cursive; color: #c41e3a; font-size: 3.5rem;">Merry Christmas</h1>
+        <button id="start-btn" class="start-btn">TAP TO ENTER</button>
+        <p style="color: #666; margin-top: 20px; font-size: 0.8rem;">To JN</p>
+    </div>
+
+    <audio id="bgm" loop preload="auto">
+       <source src="./music.mp3" type="audio/mpeg">
+    </audio>
+
+    <div id="ui-layer">
+        <div id="music-control" style="position: absolute; top: 20px; left: 20px; color: #FFD700; cursor: pointer; pointer-events: auto; font-size: 24px;">
+            <span>♪</span>
+        </div>
+
+        <div class="header-container">
+            <h1>Merry Christmas</h1>
+            <div class="subtitle">To JN</div>
+        </div>
+        
+        <div class="guide-panel">
+            <div class="guide-item active" data-key="1"><span>1</span> 圣诞树 (Tree)</div>
+            <div class="guide-item" data-key="2"><span>2</span> 专属誓言 (Promise)</div>
+            <div class="guide-item" data-key="3"><span>3</span> 爱心 (Heart)</div>
+            <div class="guide-item" data-key="4"><span>4</span> 星河 (Galaxy)</div>
+            <div class="guide-item" data-key="5"><span>5</span> 信件 (Letter)</div>
+        </div>
+
+        <div class="wish-container">
+            <input type="text" id="wish-input" placeholder="Make a wish...">
+            <button id="wish-btn">Send</button>
+        </div>
+    </div>
+
+    <div id="letter-modal" class="modal-overlay">
+        <div class="letter-card">
+            <div class="letter-text" id="letter-content"></div>
+            <div class="letter-author" style="color:#FFD700; font-family:'Pinyon Script'; font-size:1.5rem; text-align:right;">- by cy</div>
+            <p style="color: #666; font-size: 0.7rem; margin-top: 20px;">Tap anywhere to close</p>
+        </div>
+    </div>
+
+    <div id="wish-modal" class="modal-overlay">
+        <div class="wish-feedback-card">
+            <div style="color:#fff; font-size: 1.1rem; margin-bottom: 10px;">愿望已发送 <br><span id="wish-content-display" style="color:#FFD700; display:block; margin-top:10px;"></span></div>
+            <div style="color:#c41e3a; font-family: 'Pinyon Script'; font-size: 1.5rem;">cy收到啦</div>
+        </div>
+    </div>
+
+    <div id="canvas-container"></div>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+        import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+        import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        const CONFIG = {
+            particleCount: 12000,
+            ribbonParticleCount: 2000,
+            treeHeight: 22,
+            treeRadius: 8,
+            colors: [
+                new THREE.Color('#0f4d0f'), 
+                new THREE.Color('#228b22'), 
+                new THREE.Color('#780a0a'), 
+                new THREE.Color('#c41e3a'), 
+                new THREE.Color('#FFD700'), 
+                new THREE.Color('#FFFFFF')  
+            ]
+        };
+
+        const LETTERS = ["Merry Christmas! You are the best gift ever."];
+
+        const vertexShader = `
+            uniform float uTime;
+            uniform float uSize;
+            uniform float uMixHeart;    
+            uniform float uMixLove;     
+            uniform float uMixScatter; 
+
+            attribute vec3 positionTree;
+            attribute vec3 positionHeart;
+            attribute vec3 positionLove;
+            attribute vec3 positionScatter;
+            attribute vec3 color;
+            attribute float sizeRand;
+            
+            varying vec3 vColor;
+            varying float vAlpha;
+
+            void main() {
+                vColor = color;
+                vec3 pos = mix(positionTree, positionHeart, uMixHeart);
+                pos = mix(pos, positionLove, uMixLove);
+                pos = mix(pos, positionScatter, uMixScatter);
+
+                float t = uTime * 0.5;
+                if(uMixScatter > 0.8) {
+                    pos.y += sin(t + pos.x * 0.3) * 0.5;
+                    pos.x += cos(t * 0.7 + pos.z * 0.3) * 0.5;
+                } else {
+                    pos.x += sin(t * 1.5 + pos.y * 0.5) * 0.05; 
+                }
+
+                vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
+                gl_Position = projectionMatrix * mvPosition;
+                gl_PointSize = uSize * (0.5 + sizeRand * 1.0) * (40.0 / -mvPosition.z);
+                
+                float twinkle = sin(uTime * 3.0 + sizeRand * 20.0);
+                vAlpha = 0.8 + 0.2 * twinkle;
+            }
+        `;
+
+        const fragmentShader = `
+            varying vec3 vColor;
+            varying float vAlpha;
+            void main() {
+                float dist = length(gl_PointCoord - vec2(0.5));
+                if (dist > 0.5) discard;
+                float glow = 1.0 - smoothstep(0.0, 0.5, dist);
+                gl_FragColor = vec4(vColor, vAlpha * glow);
+            }
+        `;
+
+        class ChristmasApp {
+            constructor() {
+                this.clock = new THREE.Clock();
+                this.state = 'tree'; 
+                this.targetUniforms = { heart: 0, love: 0, scatter: 0 };
+                this.currentUniforms = { heart: 0, love: 0, scatter: 0 };
+                this.isReadingLetter = false;
+
+                this.initThree();
+                this.initParticles();
+                this.initSnow();
+                this.init3DHeart();
+                this.initStars(); 
+                this.initPostProcessing();
+                this.initInteraction();
+                this.animate();
+            }
+
+            initThree() {
+                this.container = document.getElementById('canvas-container');
+                this.scene = new THREE.Scene();
+                this.scene.fog = new THREE.FogExp2(0x050205, 0.02);
+                this.camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+                // 手机端拉远一点距离，保证显示完整
+                this.camera.position.set(0, 10, window.innerWidth < 768 ? 45 : 35);
+                
+                this.renderer = new THREE.WebGLRenderer({ antialias: false });
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                this.container.appendChild(this.renderer.domElement);
+                
+                this.scene.add(new THREE.AmbientLight(0xffffff, 0.4));
+                const dirLight = new THREE.DirectionalLight(0xfffaed, 0.8);
+                dirLight.position.set(10, 20, 10);
+                this.scene.add(dirLight);
+
+                this.controls = new OrbitControls(this.camera, this.renderer.domElement);
+                this.controls.enableDamping = true; 
+                this.controls.dampingFactor = 0.05;
+                this.controls.autoRotate = true; 
+                this.controls.autoRotateSpeed = 1.0;
+                this.controls.enablePan = false; // 手机上禁用平移，防止误触
+                this.controls.maxDistance = 80;
+                this.controls.minDistance = 10;
+            }
+
+            generateTextPoints(count) {
+                const canvas = document.createElement('canvas');
+                canvas.width = 2048; canvas.height = 512;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = 'black'; ctx.fillRect(0,0, canvas.width, canvas.height);
+                ctx.font = 'bold 100px "Times New Roman"'; 
+                ctx.fillStyle = 'white';
+                ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                
+                ctx.fillText("I hope I can stick", canvas.width/2, canvas.height/2 - 60);
+                ctx.fillText("with JN forever", canvas.width/2, canvas.height/2 + 60);
+
+                const data = ctx.getImageData(0,0, canvas.width, canvas.height).data;
+                const valid = [];
+                for(let y=0; y<canvas.height; y+=3) 
+                    for(let x=0; x<canvas.width; x+=3) 
+                        if(data[(y*canvas.width+x)*4] > 128) valid.push({x,y});
+                
+                const pts = [];
+                for(let i=0; i<count; i++){
+                    const p = valid[Math.floor(Math.random()*valid.length)];
+                    const px = (p.x - canvas.width/2) * 0.035;
+                    const py = -(p.y - canvas.height/2) * 0.035 + 8;
+                    pts.push(px, py, (Math.random()-0.5) * 1.5);
+                }
+                return pts;
+            }
+
+            initParticles() {
+                const total = CONFIG.particleCount + CONFIG.ribbonParticleCount;
+                const geo = new THREE.BufferGeometry();
+                const posTree = [], posHeart = [], posScatter = [], colors = [], sizes = [];
+                const textPoints = this.generateTextPoints(total);
+
+                for(let i=0; i<total; i++) {
+                    const h = Math.random() * CONFIG.treeHeight;
+                    const rMax = (1 - h/CONFIG.treeHeight) * CONFIG.treeRadius;
+                    const r = rMax * Math.sqrt(Math.random());
+                    const ang = Math.random() * Math.PI * 2;
+                    const spiral = h * 0.5;
+                    posTree.push(r*Math.cos(ang + spiral), h - CONFIG.treeHeight/2 + 2, r*Math.sin(ang + spiral));
+
+                    const t = Math.random() * Math.PI * 2;
+                    const sc = 0.6;
+                    posHeart.push(
+                        16*Math.pow(Math.sin(t),3)*sc, 
+                        (13*Math.cos(t)-5*Math.cos(2*t)-2*Math.cos(3*t)-Math.cos(4*t))*sc + 10, 
+                        (Math.random()-0.5) * 6
+                    );
+                    posScatter.push((Math.random()-0.5)*60, Math.random()*40, (Math.random()-0.5)*60);
+
+                    const rnd = Math.random();
+                    let c;
+                    if (i > CONFIG.particleCount) c = rnd > 0.5 ? CONFIG.colors[4] : CONFIG.colors[3];
+                    else {
+                        if (rnd < 0.65) c = CONFIG.colors[0];      
+                        else if (rnd < 0.80) c = CONFIG.colors[1]; 
+                        else if (rnd < 0.88) c = CONFIG.colors[2]; 
+                        else if (rnd < 0.94) c = CONFIG.colors[4]; 
+                        else c = CONFIG.colors[5];                 
+                    }
+                    colors.push(c.r, c.g, c.b);
+                    sizes.push(Math.random());
+                }
+
+                geo.setAttribute('position', new THREE.Float32BufferAttribute(posTree, 3));
+                geo.setAttribute('positionTree', new THREE.Float32BufferAttribute(posTree, 3));
+                geo.setAttribute('positionHeart', new THREE.Float32BufferAttribute(posHeart, 3));
+                geo.setAttribute('positionLove', new THREE.Float32BufferAttribute(textPoints, 3));
+                geo.setAttribute('positionScatter', new THREE.Float32BufferAttribute(posScatter, 3));
+                geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+                geo.setAttribute('sizeRand', new THREE.Float32BufferAttribute(sizes, 1));
+
+                this.material = new THREE.ShaderMaterial({
+                    vertexShader, fragmentShader,
+                    uniforms: { uTime:{value:0}, uSize:{value:7}, uMixHeart:{value:0}, uMixLove:{value:0}, uMixScatter:{value:0} },
+                    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending
+                });
+                this.scene.add(new THREE.Points(geo, this.material));
+            }
+
+            initSnow() {
+                const pts = [];
+                for(let i=0; i<600; i++) pts.push((Math.random()-0.5)*80, Math.random()*60, (Math.random()-0.5)*80);
+                const geo = new THREE.BufferGeometry();
+                geo.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
+                this.snow = new THREE.Points(geo, new THREE.PointsMaterial({color:0xffffff, size:0.25, transparent:true, opacity:0.7}));
+                this.scene.add(this.snow);
+            }
+
+            init3DHeart() {
+                const shape = new THREE.Shape();
+                shape.moveTo(25, 25);
+                shape.bezierCurveTo(25, 25, 20, 0, 0, 0);
+                shape.bezierCurveTo(-30, 0, -30, 35, -30, 35);
+                shape.bezierCurveTo(-30, 55, -10, 77, 25, 95);
+                shape.bezierCurveTo(60, 77, 80, 55, 80, 35);
+                shape.bezierCurveTo(80, 35, 80, 0, 50, 0);
+                shape.bezierCurveTo(35, 0, 25, 25, 25, 25);
+                const geo = new THREE.ExtrudeGeometry(shape, {depth:8, bevelEnabled:true, bevelSegments:2});
+                geo.center();
+                const mat = new THREE.MeshPhysicalMaterial({color: 0xc41e3a, emissive: 0x500000, metalness: 0.5, roughness: 0.1, clearcoat: 1.0});
+                this.topHeart = new THREE.Mesh(geo, mat);
+                this.topHeart.scale.set(0.025, 0.025, 0.025);
+                this.topHeart.rotation.x = Math.PI;
+                this.topHeart.position.y = 14.5;
+                this.scene.add(this.topHeart);
+                this.topHeart.add(new THREE.PointLight(0xff0000, 1, 20));
+            }
+
+            initStars() {
+                const geo = new THREE.SphereGeometry(0.3, 8, 8);
+                const mat = new THREE.MeshBasicMaterial({color:0xFFD700});
+                for(let i=0; i<20; i++){
+                    const m = new THREE.Mesh(geo, mat);
+                    m.position.set((Math.random()-0.5)*60, Math.random()*40, (Math.random()-0.5)*60);
+                    this.scene.add(m);
+                }
+            }
+
+            initPostProcessing() {
+                this.composer = new EffectComposer(this.renderer);
+                this.composer.addPass(new RenderPass(this.scene, this.camera));
+                const bloom = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
+                bloom.strength = 1.2; bloom.radius = 0.6; bloom.threshold = 0.2;
+                this.composer.addPass(bloom);
+            }
+
+            // 统一的状态切换逻辑
+            switchState(key) {
+                const items = document.querySelectorAll('.guide-item');
+                items.forEach(el => el.classList.remove('active'));
+
+                // 找到对应的DOM元素并高亮（如果是键盘触发也需要高亮UI）
+                const activeItem = document.querySelector(`.guide-item[data-key="${key}"]`);
+                if(activeItem) activeItem.classList.add('active');
+
+                switch(key) {
+                    case '1':
+                        this.state = 'tree';
+                        this.targetUniforms = {heart:0, love:0, scatter:0};
+                        this.hideLetter();
+                        break;
+                    case '2':
+                        this.state = 'love';
+                        this.targetUniforms = {heart:0, love:1, scatter:0};
+                        this.hideLetter();
+                        break;
+                    case '3':
+                        this.state = 'heart';
+                        this.targetUniforms = {heart:1, love:0, scatter:0};
+                        this.hideLetter();
+                        break;
+                    case '4':
+                        this.state = 'scatter';
+                        this.targetUniforms = {heart:0, love:0, scatter:1};
+                        break;
+                    case '5':
+                        if(this.state === 'scatter') {
+                            this.isReadingLetter ? this.hideLetter() : this.showLetter();
+                        }
+                        break;
+                }
+            }
+
+            initInteraction() {
+                window.addEventListener('resize', () => {
+                    this.camera.aspect = window.innerWidth / window.innerHeight;
+                    this.camera.updateProjectionMatrix();
+                    this.renderer.setSize(window.innerWidth, window.innerHeight);
+                });
+
+                // 键盘监听
+                window.addEventListener('keydown', (e) => this.switchState(e.key));
+
+                // 手机/鼠标点击 UI 监听
+                document.querySelectorAll('.guide-item').forEach(item => {
+                    item.addEventListener('click', (e) => {
+                        e.stopPropagation(); // 防止触发场景点击
+                        const key = item.getAttribute('data-key');
+                        this.switchState(key);
+                    });
+                });
+
+                this.container.addEventListener('mousedown', () => { this.controls.autoRotate = false; });
+                this.container.addEventListener('touchstart', () => { this.controls.autoRotate = false; });
+                this.container.addEventListener('mouseup', () => { this.controls.autoRotate = true; });
+                this.container.addEventListener('touchend', () => { this.controls.autoRotate = true; });
+
+                document.getElementById('start-btn').addEventListener('click', () => {
+                    document.getElementById('start-screen').classList.add('hidden');
+                    document.getElementById('ui-layer').classList.add('visible');
+                    const bgm = document.getElementById('bgm');
+                    bgm.play().catch(() => console.log("Music blocked"));
+                });
+
+                const musicBtn = document.getElementById('music-control');
+                musicBtn.addEventListener('click', () => {
+                    const bgm = document.getElementById('bgm');
+                    if(bgm.paused) bgm.play(); else bgm.pause();
+                });
+
+                document.getElementById('wish-btn').addEventListener('click', () => {
+                    const inp = document.getElementById('wish-input');
+                    if(!inp.value) return;
+                    document.getElementById('wish-content-display').innerText = `“${inp.value}”`;
+                    document.getElementById('wish-modal').classList.add('active');
+                    setTimeout(()=>document.getElementById('wish-modal').classList.remove('active'), 3000);
+                    inp.value = "";
+                });
+
+                document.getElementById('letter-modal').addEventListener('click', () => {
+                    this.hideLetter();
+                });
+            }
+
+            showLetter() {
+                document.getElementById('letter-content').innerText = LETTERS[0];
+                document.getElementById('letter-modal').classList.add('active');
+                this.isReadingLetter = true;
+            }
+
+            hideLetter() {
+                document.getElementById('letter-modal').classList.remove('active');
+                this.isReadingLetter = false;
+            }
+
+            animate() {
+                requestAnimationFrame(this.animate.bind(this));
+                this.controls.update();
+                const time = this.clock.getElapsedTime();
+                
+                this.currentUniforms.heart += (this.targetUniforms.heart - this.currentUniforms.heart) * 0.05;
+                this.currentUniforms.love += (this.targetUniforms.love - this.currentUniforms.love) * 0.05;
+                this.currentUniforms.scatter += (this.targetUniforms.scatter - this.currentUniforms.scatter) * 0.05;
+
+                this.material.uniforms.uMixHeart.value = this.currentUniforms.heart;
+                this.material.uniforms.uMixLove.value = this.currentUniforms.love;
+                this.material.uniforms.uMixScatter.value = this.currentUniforms.scatter;
+                this.material.uniforms.uTime.value = time;
+
+                const snowPos = this.snow.geometry.attributes.position.array;
+                for(let i=1; i<snowPos.length; i+=3) {
+                    snowPos[i] -= 0.08;
+                    if(snowPos[i] < -10) snowPos[i] = 40;
+                }
+                this.snow.geometry.attributes.position.needsUpdate = true;
+                this.topHeart.rotation.y += 0.02;
+                this.composer.render();
+            }
+        }
+
+        window.onload = () => new ChristmasApp();
+    </script>
+</body>
+</html>
